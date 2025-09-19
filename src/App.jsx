@@ -53,7 +53,8 @@ function Card({ card, onClick }) {
     </span>
   );
 }
-function MiniChart({ highlight, freqMap }) {
+
+function MiniChart({ highlight, freqMap, onCellClick }) {
   return (
     <div className="chart" style={{ marginTop: 10 }}>
       <div className="grid">
@@ -74,10 +75,19 @@ function MiniChart({ highlight, freqMap }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                userSelect: "none",
+                touchAction: "manipulation"
               };
+              const label = handLabelFromKey(k);
               return (
-                <div key={k} className="cell" style={style} title={`${handLabelFromKey(k)}: raise ${Math.round(f)}%`}>
-                  {handLabelFromKey(k)}
+                <div
+                  key={k}
+                  className="cell"
+                  style={style}
+                  title={`${label}: raise ${Math.round(f)}%`}
+                  onClick={() => onCellClick?.(label, Math.round(f))}
+                >
+                  {label}
                 </div>
               );
             })}
@@ -98,12 +108,15 @@ export default function App() {
 
   // Trainer state
   const [result, setResult] = useState(null);           // "correct" | "wrong" | null
-  const [answered, setAnswered] = useState(false);      // disables inputs after answer
+  const [answered, setAnswered] = useState(false);
   const [showChart, setShowChart] = useState(false);    // shown only on wrong
-  const [score, setScore] = useState(0);                // current streak
-  const [highScore, setHighScore] = useState(0);        // best streak (persisted)
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const [mixPct, setMixPct] = useState(50);
   const [tolerance, setTolerance] = useState(10);
+
+  // Mobile-friendly: show tapped cell percent
+  const [cellInfo, setCellInfo] = useState(null);       // { hand: "AKo", pct: 100 } | null
 
   // Load persisted settings
   useEffect(() => {
@@ -123,6 +136,7 @@ export default function App() {
     setResult(null);
     setAnswered(false);
     setShowChart(false);
+    setCellInfo(null);
     setHand(() => {
       const [a, b] = deckDealValid();
       const obj = { c1: a, c2: b, nonce: Math.random() };
@@ -150,14 +164,12 @@ export default function App() {
         setHighScore(hs => (ns > hs ? ns : hs));
         return ns;
       });
-      // Auto-advance on correct; do not show chart
       setTimeout(() => {
         next();
       }, 200);
     } else {
-      // Wrong: reset streak and auto-show chart (lock inputs)
       setScore(0);
-      setShowChart(true);
+      setShowChart(true); // show chart on wrong
     }
   }
 
@@ -177,7 +189,7 @@ export default function App() {
   return (
     <div className="wrap">
       <header className="head">
-        <div>BTN Open — 100bb Cashr</div>
+        <div>BTN Open — 100bb Cash</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div>Score: {score}</div>
           <div>High: {highScore}</div>
@@ -220,13 +232,25 @@ export default function App() {
         </div>
 
         <button onClick={next}>Next</button>
-        {/* Chart button only appears after a wrong answer */}
         {answered && result === "wrong" && (
           <button onClick={() => setShowChart(s => !s)}>{showChart ? "Hide chart" : "Chart"}</button>
         )}
       </div>
 
-      {answered && result === "wrong" && showChart && <MiniChart highlight={key} freqMap={BTN_FREQ_100BB} />}
+      {/* Touch-friendly info bar */}
+      {answered && result === "wrong" && cellInfo && (
+        <div style={{ marginTop: 8, color: "#a8b2c7" }}>
+          {cellInfo.hand} • Raise {cellInfo.pct}%
+        </div>
+      )}
+
+      {answered && result === "wrong" && showChart && (
+        <MiniChart
+          highlight={key}
+          freqMap={BTN_FREQ_100BB}
+          onCellClick={(handLabel, pct) => setCellInfo({ hand: handLabel, pct })}
+        />
+      )}
     </div>
   );
 }
