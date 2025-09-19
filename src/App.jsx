@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import BTN_FREQ_100BB from "./btnFreq.js";
+import { FREQ_MAPS_6MAX_100BB, POSITION_TITLES } from "./freqMaps.js";
 
 const RANKS = ["A","K","Q","J","T","9","8","7","6","5","4","3","2"];
 const SUITS = ["s","h","d","c"];
@@ -53,7 +53,6 @@ function Card({ card, onClick }) {
     </span>
   );
 }
-
 function MiniChart({ highlight, freqMap, onCellClick }) {
   return (
     <div className="chart" style={{ marginTop: 10 }}>
@@ -99,38 +98,53 @@ function MiniChart({ highlight, freqMap, onCellClick }) {
 }
 
 export default function App() {
-  // Hand with nonce
+  const POSITIONS = ["UTG", "HJ", "CO", "BTN", "SB"];
+  const [pos, setPos] = useState(() => localStorage.getItem("trainer_pos") || "BTN");
+  const activeFreq = FREQ_MAPS_6MAX_100BB[pos] || FREQ_MAPS_6MAX_100BB.BTN;
+  const title = POSITION_TITLES[pos] || POSITION_TITLES.BTN;
+
+  // Per-position high scores
+  const highKey = p => `btn_high_score_${p}`;
+
+  // Hand + trainer state
   const [hand, setHand] = useState(() => {
     const [a, b] = deckDealValid();
     return { c1: a, c2: b, nonce: Math.random() };
   });
   const { c1, c2 } = hand;
 
-  // Trainer state
-  const [result, setResult] = useState(null);           // "correct" | "wrong" | null
+  const [result, setResult] = useState(null);
   const [answered, setAnswered] = useState(false);
-  const [showChart, setShowChart] = useState(false);    // shown only on wrong
+  const [showChart, setShowChart] = useState(false);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [mixPct, setMixPct] = useState(50);
   const [tolerance, setTolerance] = useState(10);
+  const [cellInfo, setCellInfo] = useState(null);
 
-  // Mobile-friendly: show tapped cell percent
-  const [cellInfo, setCellInfo] = useState(null);       // { hand: "AKo", pct: 100 } | null
-
-  // Load persisted settings
+  // Persist basics
+  useEffect(() => { document.title = title; }, [title]);
   useEffect(() => {
     const savedTol = Number(localStorage.getItem("btn_tol") || "10");
     if (!Number.isNaN(savedTol)) setTolerance(savedTol);
-    const savedHigh = Number(localStorage.getItem("btn_high_score") || "0");
-    if (!Number.isNaN(savedHigh)) setHighScore(savedHigh);
   }, []);
+  useEffect(() => { localStorage.setItem("btn_tol", String(tolerance)); }, [tolerance]);
+  useEffect(() => { localStorage.setItem("trainer_pos", pos); }, [pos]);
+
+  // Load high for current pos
   useEffect(() => {
-    localStorage.setItem("btn_tol", String(tolerance));
-  }, [tolerance]);
-  useEffect(() => {
-    localStorage.setItem("btn_high_score", String(highScore));
-  }, [highScore]);
+    const savedHigh = Number(localStorage.getItem(highKey(pos)) || "0");
+    setHighScore(Number.isNaN(savedHigh) ? 0 : savedHigh);
+    setScore(0);
+    setResult(null);
+    setAnswered(false);
+    setShowChart(false);
+    setCellInfo(null);
+  }, [pos]);
+
+  function persistHigh(p, value) {
+    localStorage.setItem(highKey(p), String(value));
+  }
 
   function next() {
     setResult(null);
@@ -139,14 +153,12 @@ export default function App() {
     setCellInfo(null);
     setHand(() => {
       const [a, b] = deckDealValid();
-      const obj = { c1: a, c2: b, nonce: Math.random() };
-      console.log("Next ->", obj);
-      return obj;
+      return { c1: a, c2: b, nonce: Math.random() };
     });
   }
 
   const key = useMemo(() => comboKey(c1, c2), [c1, c2, hand.nonce]);
-  const raiseFreq = typeof BTN_FREQ_100BB[key] === "number" ? BTN_FREQ_100BB[key] : 0;
+  const raiseFreq = typeof activeFreq[key] === "number" ? activeFreq[key] : 0;
 
   function gradePercent(percent) {
     if (percent === "PURE_RAISE") return raiseFreq === 100;
@@ -161,36 +173,44 @@ export default function App() {
     if (ok) {
       setScore(s => {
         const ns = s + 1;
-        setHighScore(hs => (ns > hs ? ns : hs));
+        if (ns > highScore) {
+          setHighScore(ns);
+          persistHigh(pos, ns);
+        }
         return ns;
       });
-      setTimeout(() => {
-        next();
-      }, 200);
+      setTimeout(next, 200);
     } else {
       setScore(0);
-      setShowChart(true); // show chart on wrong
+      setShowChart(true);
     }
   }
 
   function acceptImmediate(percent) {
     if (answered) return;
-    const ok = gradePercent(percent);
-    finishAnswer(ok);
+    finishAnswer(gradePercent(percent));
   }
-
   function submitManual() {
     if (answered) return;
     const p = Math.max(0, Math.min(100, Number(mixPct) || 0));
-    const ok = gradePercent(p);
-    finishAnswer(ok);
+    finishAnswer(gradePercent(p));
   }
 
   return (
     <div className="wrap">
       <header className="head">
-        <div>BTN Open — 100bb Cash</div>
+        <div>{title}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <label>
+            Position
+            <select
+              value={pos}
+              onChange={e => setPos(e.target.value)}
+              style={{ marginLeft: 8, background: "#0b1220", color: "#e6ecff", border: "1px solid #2a3245", borderRadius: 6, padding: "4px 8px" }}
+            >
+              {POSITIONS.map(p => <option key={p} value={p}>{p} Open</option>)}
+            </select>
+          </label>
           <div>Score: {score}</div>
           <div>High: {highScore}</div>
           <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -237,19 +257,21 @@ export default function App() {
         )}
       </div>
 
-      {/* Touch-friendly info bar */}
-      {answered && result === "wrong" && cellInfo && (
-        <div style={{ marginTop: 8, color: "#a8b2c7" }}>
-          {cellInfo.hand} • Raise {cellInfo.pct}%
-        </div>
-      )}
-
-      {answered && result === "wrong" && showChart && (
-        <MiniChart
-          highlight={key}
-          freqMap={BTN_FREQ_100BB}
-          onCellClick={(handLabel, pct) => setCellInfo({ hand: handLabel, pct })}
-        />
+      {answered && result === "wrong" && (
+        <>
+          {showChart && (
+            <MiniChart
+              highlight={key}
+              freqMap={activeFreq}
+              onCellClick={(handLabel, pct) => setCellInfo({ hand: handLabel, pct })}
+            />
+          )}
+          {cellInfo && (
+            <div style={{ marginTop: 8, color: "#a8b2c7" }}>
+              {cellInfo.hand} • Raise {cellInfo.pct}%
+            </div>
+          )}
+        </>
       )}
     </div>
   );
