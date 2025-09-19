@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { FREQ_MAPS_6MAX_100BB, POSITION_TITLES } from "./freqMaps.js";
+import { FREQ_MAPS } from "./freqMaps.js";
 
 const RANKS = ["A","K","Q","J","T","9","8","7","6","5","4","3","2"];
 const SUITS = ["s","h","d","c"];
@@ -98,13 +98,26 @@ function MiniChart({ highlight, freqMap, onCellClick }) {
 }
 
 export default function App() {
-  const POSITIONS = ["UTG", "HJ", "CO", "BTN", "SB"];
-  const [pos, setPos] = useState(() => localStorage.getItem("trainer_pos") || "BTN");
-  const activeFreq = FREQ_MAPS_6MAX_100BB[pos] || FREQ_MAPS_6MAX_100BB.BTN;
-  const title = POSITION_TITLES[pos] || POSITION_TITLES.BTN;
+  // Table selector: "6MAX" or "9MAX"
+  const [table, setTable] = useState(() => localStorage.getItem("trainer_table") || "6MAX");
+  const tables = Object.keys(FREQ_MAPS);
+  const POSITIONS = FREQ_MAPS[table].positions;
+  const [pos, setPos] = useState(() => {
+    const saved = localStorage.getItem("trainer_pos");
+    return saved && FREQ_MAPS["6MAX"].positions.includes(saved) ? saved : "BTN";
+  });
 
-  // Per-position high scores
-  const highKey = p => `btn_high_score_${p}`;
+  // Adjust pos if table changes and current pos not available
+  useEffect(() => {
+    if (!FREQ_MAPS[table].positions.includes(pos)) {
+      setPos(FREQ_MAPS[table].positions[0]);
+    }
+  }, [table]);
+
+  const activeFreq = FREQ_MAPS[table].maps[pos];
+  const title = FREQ_MAPS[table].titles[pos];
+
+  const highKey = (t, p) => `btn_high_score_${t}_${p}`;
 
   // Hand + trainer state
   const [hand, setHand] = useState(() => {
@@ -122,12 +135,14 @@ export default function App() {
   const [tolerance, setTolerance] = useState(10);
   const [cellInfo, setCellInfo] = useState(null);
 
-  // All-time highs panel state
   const [allHighs, setAllHighs] = useState(() => {
     const obj = {};
-    for (const p of POSITIONS) {
-      const val = Number(localStorage.getItem(highKey(p)) || "0");
-      obj[p] = Number.isNaN(val) ? 0 : val;
+    for (const t of tables) {
+      obj[t] = {};
+      for (const p of FREQ_MAPS[t].positions) {
+        const val = Number(localStorage.getItem(highKey(t, p)) || "0");
+        obj[t][p] = Number.isNaN(val) ? 0 : val;
+      }
     }
     return obj;
   });
@@ -140,21 +155,22 @@ export default function App() {
   }, []);
   useEffect(() => { localStorage.setItem("btn_tol", String(tolerance)); }, [tolerance]);
   useEffect(() => { localStorage.setItem("trainer_pos", pos); }, [pos]);
+  useEffect(() => { localStorage.setItem("trainer_table", table); }, [table]);
 
-  // Load high for current pos on switch
+  // Load high when table/pos changes
   useEffect(() => {
-    const savedHigh = Number(localStorage.getItem(highKey(pos)) || "0");
+    const savedHigh = Number(localStorage.getItem(highKey(table, pos)) || "0");
     setHighScore(Number.isNaN(savedHigh) ? 0 : savedHigh);
     setScore(0);
     setResult(null);
     setAnswered(false);
     setShowChart(false);
     setCellInfo(null);
-  }, [pos]);
+  }, [table, pos]);
 
-  function persistHigh(p, value) {
-    localStorage.setItem(highKey(p), String(value));
-    setAllHighs(prev => ({ ...prev, [p]: value }));
+  function persistHigh(t, p, value) {
+    localStorage.setItem(highKey(t, p), String(value));
+    setAllHighs(prev => ({ ...prev, [t]: { ...prev[t], [p]: value } }));
   }
 
   function next() {
@@ -186,7 +202,7 @@ export default function App() {
         const ns = s + 1;
         if (ns > highScore) {
           setHighScore(ns);
-          persistHigh(pos, ns);
+          persistHigh(table, pos, ns);
         }
         return ns;
       });
@@ -213,6 +229,16 @@ export default function App() {
         <div>{title}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <label>
+            Table
+            <select
+              value={table}
+              onChange={e => setTable(e.target.value)}
+              style={{ marginLeft: 8, background: "#0b1220", color: "#e6ecff", border: "1px solid #2a3245", borderRadius: 6, padding: "4px 8px" }}
+            >
+              {tables.map(t => <option key={t} value={t}>{t === "6MAX" ? "6-max" : "9-max"}</option>)}
+            </select>
+          </label>
+          <label>
             Position
             <select
               value={pos}
@@ -233,7 +259,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* All-time highs panel */}
+      {/* All-time highs panel for current table */}
       <div style={{
         marginBottom: 12,
         background: "#111a2b",
@@ -245,9 +271,11 @@ export default function App() {
         gap: 12,
         flexWrap: "wrap"
       }}>
-        <span style={{ color: "#e6ecff" }}>All-time highs:</span>
-        {POSITIONS.map(p => (
-          <span key={p}>{p}: {allHighs[p] ?? 0}</span>
+        <span style={{ color: "#e6ecff" }}>
+          All-time highs ({table === "6MAX" ? "6-max" : "9-max"}):
+        </span>
+        {FREQ_MAPS[table].positions.map(p => (
+          <span key={p}>{p}: {allHighs[table]?.[p] ?? 0}</span>
         ))}
       </div>
 
