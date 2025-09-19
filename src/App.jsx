@@ -45,6 +45,7 @@ function colorForPct(pct) {
   const b = 80;
   return `rgb(${r}, ${g}, ${b})`;
 }
+
 function Card({ card, onClick }) {
   return (
     <span className="card" onClick={onClick} style={{ cursor: "pointer", fontSize: 20, letterSpacing: 1 }}>
@@ -88,35 +89,40 @@ function MiniChart({ highlight, freqMap }) {
 }
 
 export default function App() {
-  // Object state with nonce: guarantees new reference on Next
+  // Hand with nonce
   const [hand, setHand] = useState(() => {
     const [a, b] = deckDealValid();
     return { c1: a, c2: b, nonce: Math.random() };
   });
   const { c1, c2 } = hand;
 
-  const [result, setResult] = useState(null);
-  const [showChart, setShowChart] = useState(false);
-  const [score, setScore] = useState(0);
+  // Trainer state
+  const [result, setResult] = useState(null);           // "correct" | "wrong" | null
+  const [answered, setAnswered] = useState(false);      // disables inputs after answer
+  const [showChart, setShowChart] = useState(false);    // now controlled by answered
+  const [score, setScore] = useState(0);                // current streak
+  const [highScore, setHighScore] = useState(0);        // best streak (persisted)
   const [mixPct, setMixPct] = useState(50);
   const [tolerance, setTolerance] = useState(10);
 
+  // Load persisted settings
   useEffect(() => {
-    const savedChart = localStorage.getItem("btn_chart_toggle");
-    if (savedChart === "true") setShowChart(true);
     const savedTol = Number(localStorage.getItem("btn_tol") || "10");
     if (!Number.isNaN(savedTol)) setTolerance(savedTol);
+    const savedHigh = Number(localStorage.getItem("btn_high_score") || "0");
+    if (!Number.isNaN(savedHigh)) setHighScore(savedHigh);
   }, []);
-  useEffect(() => {
-    localStorage.setItem("btn_chart_toggle", showChart ? "true" : "false");
-  }, [showChart]);
   useEffect(() => {
     localStorage.setItem("btn_tol", String(tolerance));
   }, [tolerance]);
+  useEffect(() => {
+    localStorage.setItem("btn_high_score", String(highScore));
+  }, [highScore]);
 
   function next() {
     setResult(null);
-    setShowChart(false);
+    setAnswered(false);
+    setShowChart(false); // chart only after answering
     setHand(() => {
       const [a, b] = deckDealValid();
       const obj = { c1: a, c2: b, nonce: Math.random() };
@@ -134,29 +140,43 @@ export default function App() {
     if (raiseFreq === 0 || raiseFreq === 100) return false;
     return Math.abs(percent - raiseFreq) <= tolerance;
   }
-  function acceptImmediate(percent) {
-    const ok = gradePercent(percent);
+
+  function finishAnswer(ok) {
     setResult(ok ? "correct" : "wrong");
-    if (ok) setScore(s => s + 1);
-    if (!ok) setShowChart(true);
-    // Auto-advance on correct after a short tick to show feedback
-    if (ok) setTimeout(next, 200);
+    setAnswered(true);
+    setShowChart(true); // reveal chart only after answer
+    if (ok) {
+      setScore(s => {
+        const ns = s + 1;
+        setHighScore(hs => (ns > hs ? ns : hs));
+        return ns;
+      });
+    } else {
+      setScore(0); // reset streak on wrong
+    }
   }
+
+  function acceptImmediate(percent) {
+    if (answered) return; // lock after first answer
+    const ok = gradePercent(percent);
+    finishAnswer(ok);
+    // No auto-next now; user decides to view chart then click Next
+  }
+
   function submitManual() {
+    if (answered) return; // lock after first answer
     const p = Math.max(0, Math.min(100, Number(mixPct) || 0));
     const ok = gradePercent(p);
-    setResult(ok ? "correct" : "wrong");
-    if (ok) setScore(s => s + 1);
-    if (!ok) setShowChart(true);
-    if (ok) setTimeout(next, 200);
+    finishAnswer(ok);
   }
 
   return (
     <div className="wrap">
       <header className="head">
         <div>BTN RFI Trainer</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div>Score: {score}</div>
+          <div>High: {highScore}</div>
           <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
             Tol ±
             <input type="number" min={1} max={30} value={tolerance}
@@ -167,23 +187,22 @@ export default function App() {
       </header>
 
       <div className="hand">
-        <Card card={c1} onClick={next} />
-        <Card card={c2} onClick={next} />
+        <Card card={c1} onClick={answered ? undefined : next} />
+        <Card card={c2} onClick={answered ? undefined : next} />
         {result === "correct" && <span className="mark good">✔</span>}
         {result === "wrong" && <span className="mark bad">✘</span>}
       </div>
 
       <div className="actions" style={{ gap: 10, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
-        {/* Instant-submit pure buttons */}
-        <button onClick={() => acceptImmediate("PURE_RAISE")}>Pure Raise</button>
-        <button onClick={() => acceptImmediate("PURE_FOLD")}>Pure Fold</button>
+        {/* Disable inputs after answer; only Next remains */}
+        <button disabled={answered} onClick={() => acceptImmediate("PURE_RAISE")}>Pure Raise</button>
+        <button disabled={answered} onClick={() => acceptImmediate("PURE_FOLD")}>Pure Fold</button>
 
-        {/* Mixed quick options (instant) + manual input (Submit) */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, borderRadius: 6, padding: "4px 8px", background: "#202634" }}>
           <span>Mixed</span>
-          <button onClick={() => acceptImmediate(25)}>25</button>
-          <button onClick={() => acceptImmediate(50)}>50</button>
-          <button onClick={() => acceptImmediate(75)}>75</button>
+          <button disabled={answered} onClick={() => acceptImmediate(25)}>25</button>
+          <button disabled={answered} onClick={() => acceptImmediate(50)}>50</button>
+          <button disabled={answered} onClick={() => acceptImmediate(75)}>75</button>
           <input
             type="number"
             min={0}
@@ -192,15 +211,17 @@ export default function App() {
             onChange={e => setMixPct(e.target.value)}
             style={{ width: 64 }}
             placeholder="0-100"
+            disabled={answered}
           />
-          <button className="primary" onClick={submitManual}>Submit</button>
+          <button className="primary" disabled={answered} onClick={submitManual}>Submit</button>
         </div>
 
         <button onClick={next}>Next</button>
-        <button onClick={() => setShowChart(s => !s)}>{showChart ? "Hide chart" : "Chart"}</button>
+        {/* Remove Chart toggle before answer; show only after answer */}
+        {answered && <button onClick={() => setShowChart(s => !s)}>{showChart ? "Hide chart" : "Chart"}</button>}
       </div>
 
-      {showChart && <MiniChart highlight={key} freqMap={BTN_FREQ_100BB} />}
+      {answered && showChart && <MiniChart highlight={key} freqMap={BTN_FREQ_100BB} />}
     </div>
   );
 }
