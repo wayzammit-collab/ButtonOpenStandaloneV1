@@ -122,6 +122,16 @@ export default function App() {
   const [tolerance, setTolerance] = useState(10);
   const [cellInfo, setCellInfo] = useState(null);
 
+  // All-time highs panel state
+  const [allHighs, setAllHighs] = useState(() => {
+    const obj = {};
+    for (const p of POSITIONS) {
+      const val = Number(localStorage.getItem(highKey(p)) || "0");
+      obj[p] = Number.isNaN(val) ? 0 : val;
+    }
+    return obj;
+  });
+
   // Persist basics
   useEffect(() => { document.title = title; }, [title]);
   useEffect(() => {
@@ -131,7 +141,7 @@ export default function App() {
   useEffect(() => { localStorage.setItem("btn_tol", String(tolerance)); }, [tolerance]);
   useEffect(() => { localStorage.setItem("trainer_pos", pos); }, [pos]);
 
-  // Load high for current pos
+  // Load high for current pos on switch
   useEffect(() => {
     const savedHigh = Number(localStorage.getItem(highKey(pos)) || "0");
     setHighScore(Number.isNaN(savedHigh) ? 0 : savedHigh);
@@ -144,6 +154,7 @@ export default function App() {
 
   function persistHigh(p, value) {
     localStorage.setItem(highKey(p), String(value));
+    setAllHighs(prev => ({ ...prev, [p]: value }));
   }
 
   function next() {
@@ -200,7 +211,7 @@ export default function App() {
     <div className="wrap">
       <header className="head">
         <div>{title}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <label>
             Position
             <select
@@ -221,6 +232,24 @@ export default function App() {
           </label>
         </div>
       </header>
+
+      {/* All-time highs panel */}
+      <div style={{
+        marginBottom: 12,
+        background: "#111a2b",
+        border: "1px solid #2a3245",
+        borderRadius: 10,
+        padding: "8px 10px",
+        color: "#a8b2c7",
+        display: "flex",
+        gap: 12,
+        flexWrap: "wrap"
+      }}>
+        <span style={{ color: "#e6ecff" }}>All-time highs:</span>
+        {POSITIONS.map(p => (
+          <span key={p}>{p}: {allHighs[p] ?? 0}</span>
+        ))}
+      </div>
 
       <div className="hand">
         <Card card={c1} onClick={answered ? undefined : next} />
