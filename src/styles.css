@@ -12,7 +12,13 @@
   --hl: #ffda6b;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, Arial, sans-serif; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, "Segoe UI", Arial, "Noto Sans", "DejaVu Sans", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+
 .wrap { max-width: 960px; margin: 22px auto; padding: 0 12px; }
 .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .head input { background: #0b1220; color: var(--text); border: 1px solid var(--grid-border); border-radius: 6px; padding: 4px 8px; }
