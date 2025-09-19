@@ -1,0 +1,39 @@
+:root {
+  --bg: #0f1724;
+  --panel: #111a2b;
+  --btn: #1c2740;
+  --btn-primary: #3752d5;
+  --text: #e6ecff;
+  --muted: #a8b2c7;
+  --grid-border: #2a3245;
+  --cell-open: #2f6f3a;
+  --cell-fold: #5a2b2b;
+  --cell-mix: #3a3f55;
+  --hl: #ffda6b;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, Arial, sans-serif; }
+.wrap { max-width: 960px; margin: 22px auto; padding: 0 12px; }
+.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.head input { background: #0b1220; color: var(--text); border: 1px solid var(--grid-border); border-radius: 6px; padding: 4px 8px; }
+
+.hand { display: flex; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--grid-border); border-radius: 10px; padding: 14px; }
+.card { background: #0b1220; border: 1px solid var(--grid-border); border-radius: 10px; padding: 10px 14px; display: inline-flex; align-items: center; justify-content: center; min-width: 68px; height: 44px; }
+.mark { margin-left: 8px; }
+.mark.good { color: #4ade80; }
+.mark.bad { color: #f87171; }
+
+.actions { margin-top: 14px; }
+button { background: var(--btn); color: var(--text); border: 1px solid var(--grid-border); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+button.primary { background: var(--btn-primary); border-color: #2e43a3; }
+button:hover { filter: brightness(1.05); }
+input[type="range"] { width: 120px; }
+
+.chart { margin-top: 14px; background: var(--panel); border: 1px solid var(--grid-border); border-radius: 10px; padding: 10px; }
+.grid { display: grid; grid-template-rows: repeat(13, 28px); gap: 6px; }
+.row { display: grid; grid-template-columns: repeat(13, 1fr); gap: 6px; }
+.cell { height: 28px; border-radius: 6px; border: 1px solid var(--grid-border); display: flex; align-items: center; justify-content: center; }
+.cell.open { background: var(--cell-open); }
+.cell.fold { background: var(--cell-fold); }
+.cell.mix { background: var(--cell-mix); }
+.hl { outline: 2px solid var(--hl); }
