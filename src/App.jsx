@@ -99,7 +99,7 @@ export default function App() {
   // Trainer state
   const [result, setResult] = useState(null);           // "correct" | "wrong" | null
   const [answered, setAnswered] = useState(false);      // disables inputs after answer
-  const [showChart, setShowChart] = useState(false);    // now controlled by answered
+  const [showChart, setShowChart] = useState(false);    // shown only on wrong
   const [score, setScore] = useState(0);                // current streak
   const [highScore, setHighScore] = useState(0);        // best streak (persisted)
   const [mixPct, setMixPct] = useState(50);
@@ -122,7 +122,7 @@ export default function App() {
   function next() {
     setResult(null);
     setAnswered(false);
-    setShowChart(false); // chart only after answering
+    setShowChart(false);
     setHand(() => {
       const [a, b] = deckDealValid();
       const obj = { c1: a, c2: b, nonce: Math.random() };
@@ -144,27 +144,31 @@ export default function App() {
   function finishAnswer(ok) {
     setResult(ok ? "correct" : "wrong");
     setAnswered(true);
-    setShowChart(true); // reveal chart only after answer
     if (ok) {
       setScore(s => {
         const ns = s + 1;
         setHighScore(hs => (ns > hs ? ns : hs));
         return ns;
       });
+      // Auto-advance on correct; do not show chart
+      setTimeout(() => {
+        next();
+      }, 200);
     } else {
-      setScore(0); // reset streak on wrong
+      // Wrong: reset streak and auto-show chart (lock inputs)
+      setScore(0);
+      setShowChart(true);
     }
   }
 
   function acceptImmediate(percent) {
-    if (answered) return; // lock after first answer
+    if (answered) return;
     const ok = gradePercent(percent);
     finishAnswer(ok);
-    // No auto-next now; user decides to view chart then click Next
   }
 
   function submitManual() {
-    if (answered) return; // lock after first answer
+    if (answered) return;
     const p = Math.max(0, Math.min(100, Number(mixPct) || 0));
     const ok = gradePercent(p);
     finishAnswer(ok);
@@ -173,7 +177,7 @@ export default function App() {
   return (
     <div className="wrap">
       <header className="head">
-        <div>BTN RFI Trainer</div>
+        <div>BTN Open — 100bb Cashr</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div>Score: {score}</div>
           <div>High: {highScore}</div>
@@ -194,7 +198,6 @@ export default function App() {
       </div>
 
       <div className="actions" style={{ gap: 10, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
-        {/* Disable inputs after answer; only Next remains */}
         <button disabled={answered} onClick={() => acceptImmediate("PURE_RAISE")}>Pure Raise</button>
         <button disabled={answered} onClick={() => acceptImmediate("PURE_FOLD")}>Pure Fold</button>
 
@@ -217,11 +220,13 @@ export default function App() {
         </div>
 
         <button onClick={next}>Next</button>
-        {/* Remove Chart toggle before answer; show only after answer */}
-        {answered && <button onClick={() => setShowChart(s => !s)}>{showChart ? "Hide chart" : "Chart"}</button>}
+        {/* Chart button only appears after a wrong answer */}
+        {answered && result === "wrong" && (
+          <button onClick={() => setShowChart(s => !s)}>{showChart ? "Hide chart" : "Chart"}</button>
+        )}
       </div>
 
-      {answered && showChart && <MiniChart highlight={key} freqMap={BTN_FREQ_100BB} />}
+      {answered && result === "wrong" && showChart && <MiniChart highlight={key} freqMap={BTN_FREQ_100BB} />}
     </div>
   );
 }
