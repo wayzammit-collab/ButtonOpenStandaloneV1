@@ -86,24 +86,24 @@ export const FREQ_MAPS = {
     positions: ["UTG","HJ","CO","BTN","SB"],
     maps: { UTG: UTG_6, HJ: HJ_6, CO: CO_6, BTN: BTN_6, SB: SB_6 },
     titles: {
-      UTG: "UTG Open — 100bb Cash (6-max)",
-      HJ:  "HJ Open — 100bb Cash (6-max)",
-      CO:  "CO Open — 100bb Cash (6-max)",
-      BTN: "BTN Open — 100bb Cash (6-max)",
-      SB:  "SB Open — 100bb Cash (6-max)",
+      UTG: "UTG Open - 100bb Cash (6-max)",
+      HJ:  "HJ Open - 100bb Cash (6-max)",
+      CO:  "CO Open - 100bb Cash (6-max)",
+      BTN: "BTN Open - 100bb Cash (6-max)",
+      SB:  "SB Open - 100bb Cash (6-max)",
     }
   },
   "9MAX": {
     positions: ["UTG","UTG1","MP","HJ","CO","BTN","SB"],
     maps: { UTG: UTG_9, UTG1: UTG1_9, MP: MP_9, HJ: HJ_9, CO: CO_9, BTN: BTN_9, SB: SB_9 },
     titles: {
-      UTG:  "UTG Open — 100bb Cash (9-max)",
-      UTG1: "UTG+1 Open — 100bb Cash (9-max)",
-      MP:   "MP Open — 100bb Cash (9-max)",
-      HJ:   "HJ Open — 100bb Cash (9-max)",
-      CO:   "CO Open — 100bb Cash (9-max)",
-      BTN:  "BTN Open — 100bb Cash (9-max)",
-      SB:   "SB Open — 100bb Cash (9-max)",
+      UTG:  "UTG Open - 100bb Cash (9-max)",
+      UTG1: "UTG+1 Open - 100bb Cash (9-max)",
+      MP:   "MP Open - 100bb Cash (9-max)",
+      HJ:   "HJ Open - 100bb Cash (9-max)",
+      CO:   "CO Open - 100bb Cash (9-max)",
+      BTN:  "BTN Open - 100bb Cash (9-max)",
+      SB:   "SB Open - 100bb Cash (9-max)",
     }
   }
 };
