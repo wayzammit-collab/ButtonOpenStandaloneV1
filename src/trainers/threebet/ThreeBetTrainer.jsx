@@ -124,7 +124,17 @@ export default function ThreeBetTrainer() {
     return `high_${trainerId}_${t}_${p}_vs_${v}${suffix}`;
   }
 
-  // Import handler: merge, auto-navigate to the file’s spot, set mode/profile if provided
+  // Expose GTO maps of current spot for compare in GridChart (when in Exploit)
+  useEffect(() => {
+    window.__trainer_get_gto = () => {
+      const node = ranges3B[table]?.matrix?.[pos]?.[vsPos];
+      if (!node) return null;
+      return { raiseMap: node.raiseMap || {}, callMap: node.callMap || {} };
+    };
+    return () => { delete window.__trainer_get_gto; };
+  }, [ranges3B, table, pos, vsPos]);
+
+  // Import: merge + auto-nav + set mode/profile if provided
   async function onImportFiles(files) {
     let mergedData = {};
     let nav = null;
@@ -158,7 +168,7 @@ export default function ThreeBetTrainer() {
     }
   }
 
-  // Session mode
+  // Session (unchanged behavior; Start/0-N handled here and shell invokes __trainer_on_answer)
   const [sessionOn, setSessionOn] = useState(false);
   const [sessionCount, setSessionCount] = useState(20);
   const [sessionDone, setSessionDone] = useState(0);
@@ -246,7 +256,7 @@ export default function ThreeBetTrainer() {
         getFreq={getFreq}
         highScoreKey={highKey}
         supportsCall
-        allowSkip
+        autoNextDelay={250}
       />
 
       <TableOval table={table} hero={pos} villain={vsPos} />

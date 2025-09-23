@@ -31,7 +31,7 @@ export default function TrainerShell({
   getFreq,
   highScoreKey,
   supportsCall = false,
-  autoNextDelay = 250, // ms delay before auto-going to next on correct
+  autoNextDelay = 250,
 }) {
   const [hand, setHand] = useState(() => {
     const [a, b] = deckDealValid();
@@ -39,7 +39,7 @@ export default function TrainerShell({
   });
   const { c1, c2 } = hand;
 
-  const [result, setResult] = useState(null);  // null until answered
+  const [result, setResult] = useState(null);
   const [answered, setAnswered] = useState(false);
   const [showChart, setShowChart] = useState(false);
   const [chartMode, setChartMode] = useState("RAISE");
@@ -58,6 +58,7 @@ export default function TrainerShell({
   const callAllowed = typeof callMap[key] === "number" ? callMap[key] : 0;
 
   useEffect(() => { document.title = title; }, [title]);
+
   useEffect(() => {
     const savedTol = Number(localStorage.getItem("btn_tol") || "10");
     if (!Number.isNaN(savedTol)) setTolerance(savedTol);
@@ -80,7 +81,6 @@ export default function TrainerShell({
   function saveHigh(v) { localStorage.setItem(hsKey(), String(v)); }
 
   function next() {
-    // Require an answer before advancing (Next is disabled until result != null)
     setResult(null);
     setAnswered(false);
     setShowChart(false);
@@ -103,10 +103,7 @@ export default function TrainerShell({
   function finishAnswer(ok, label) {
     setResult(ok ? "correct" : "wrong");
     setAnswered(true);
-
-    // Session tracker hook (safe/no-op if missing)
     try { window.__trainer_on_answer?.(ok ? "correct" : "wrong", key, label); } catch {}
-
     if (ok) {
       setScore(s => {
         const ns = s + 1;
@@ -116,8 +113,6 @@ export default function TrainerShell({
       if (label === "RAISE_PCT") setStatusMsg(`Correct — 3‑Bet ${raiseFreq}% (±${tolerance})`);
       else if (label === "CALL") setStatusMsg(`Correct — Best action: Call`);
       else if (label === "FOLD") setStatusMsg(`Correct — Best action: Fold`);
-
-      // Auto-advance after a short delay so feedback is visible
       setTimeout(next, autoNextDelay);
     } else {
       setShowChart(true);
@@ -140,7 +135,6 @@ export default function TrainerShell({
     finishAnswer(gradeRaisePercent(p), "RAISE_PCT");
   }
 
-  // Keyboard shortcuts (Next only after result; correct still auto-advances)
   useEffect(() => {
     function onKey(e) {
       if (e.repeat) return;
@@ -220,46 +214,48 @@ export default function TrainerShell({
           <button className="primary" onClick={submitManual} style={{ minHeight: 36, minWidth: 80 }} disabled={answered}>Submit (Enter)</button>
         </div>
 
-        {/* Next disabled until an answer exists; correct answers will auto-advance after delay */}
         <button onClick={next} style={{ minHeight: 40, minWidth: 70 }} disabled={!result}>
           Next (N)
         </button>
+      </div>
 
-        {answered && result === "wrong" && (
-          <>
+      {answered && result === "wrong" && (
+        <>
+          <div style={{ display:"flex", gap:8, alignItems:"center", marginTop: 8 }}>
             <button onClick={() => setShowChart(s => !s)} style={{ minHeight: 36, minWidth: 84 }}>
               {showChart ? "Hide chart" : "Chart"}
             </button>
-            {supportsCall && showChart && (
-              <div style={{ display: "inline-flex", gap: 4, marginLeft: 6, background: "#111a2b", padding: 4, borderRadius: 8, border: "1px solid #2a3245" }}>
-                <button
-                  onClick={() => setChartMode("RAISE")}
-                  style={{ minHeight: 30, minWidth: 64, background: chartMode === "RAISE" ? "#2a3245" : "#0b1220", color: "#e6ecff", border: "1px solid #2a3245", borderRadius: 6 }}
-                >
+            {showChart && (
+              <div style={{ display:"inline-flex", gap:4, background:"#111a2b", padding:4, borderRadius:8, border:"1px solid #2a3245" }}>
+                <button onClick={() => setChartMode("RAISE")}
+                        style={{ minHeight:30, minWidth:64, background: chartMode==="RAISE"?"#2a3245":"#0b1220", color:"#e6ecff", border:"1px solid #2a3245", borderRadius:6 }}>
                   3‑Bet
                 </button>
-                <button
-                  onClick={() => setChartMode("CALL")}
-                  style={{ minHeight: 30, minWidth: 64, background: chartMode === "CALL" ? "#2a3245" : "#0b1220", color: "#e6ecff", border: "1px solid #2a3245", borderRadius: 6 }}
-                >
+                <button onClick={() => setChartMode("CALL")}
+                        style={{ minHeight:30, minWidth:64, background: chartMode==="CALL"?"#2a3245":"#0b1220", color:"#e6ecff", border:"1px solid #2a3245", borderRadius:6 }}>
                   Call
+                </button>
+                <button onClick={() => setChartMode("BEST")}
+                        style={{ minHeight:30, minWidth:64, background: chartMode==="BEST"?"#2a3245":"#0b1220", color:"#e6ecff", border:"1px solid #2a3245", borderRadius:6 }}>
+                  Best
                 </button>
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
 
-      {answered && result === "wrong" && showChart && (
-        <>
-          <GridChart
-            highlight={key}
-            freqMap={chartMode === "CALL" ? callMap : raiseMap}
-            onCellClick={(handLabel, pct) => setCellInfo({ hand: handLabel, pct })}
-          />
-          {cellInfo && (
+          {showChart && (
+            <GridChart
+              highlight={key}
+              mode={chartMode}
+              raiseMap={raiseMap}
+              callMap={callMap}
+              compare={title.includes("Exploit") && window.__trainer_get_gto ? { left: { raiseMap, callMap }, right: window.__trainer_get_gto() } : null}
+              onCellClick={(handLabel, pct) => setCellInfo({ hand: handLabel, pct })}
+            />
+          )}
+          {cellInfo && showChart && (
             <div style={{ marginTop: 8, color: "#a8b2c7" }}>
-              {cellInfo.hand} • {chartMode === "CALL" ? "Call" : "3‑Bet"} {cellInfo.pct}%
+              {cellInfo.hand} • {chartMode==="CALL" ? "Call" : chartMode==="BEST" ? "Best" : "3‑Bet"} {cellInfo.pct|0}%
             </div>
           )}
         </>
