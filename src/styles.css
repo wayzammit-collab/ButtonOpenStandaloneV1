@@ -204,3 +204,8 @@ input[type="range"] { width: 120px; }
   border-radius: 8px;
   padding: 0 6px;
 }
+/* Optional: dark base so you can see it loaded */
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+a { color: #7dd3fc; text-decoration: none; }
+a:hover { text-decoration: underline; }

@@ -1,11 +1,13 @@
-import React from "react";
-import "./styles.css";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import App from "./App.jsx";
+// Ready to paste: Router basename must match Vite base (without the trailing slash)
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App.jsx'
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <BrowserRouter>
-    <App />
-  </BrowserRouter>
-);
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter basename="/ButtonOpenStandaloneV1">
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+)

@@ -1,15 +1,8 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-
-// Use "/" in dev to avoid base-path refresh issues.
-// For production builds under a subfolder, override VITE_BASE at build time.
-const base = process.env.VITE_BASE || "/";
+// Ready to paste: Vite base must match the repo name exactly
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base,
-  server: {
-    port: 5173,
-    open: false
-  },
-});
+  base: '/ButtonOpenStandaloneV1/' // <<< repo folder on GitHub Pages
+})
