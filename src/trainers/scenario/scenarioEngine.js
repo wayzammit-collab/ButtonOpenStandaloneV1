@@ -1,4 +1,9 @@
-﻿// Remove OOP "Fold" when first to act; keep legal sets elsewhere.
+﻿// Scenario engine — river strong-hand fix + prior flow/position rules.
+// - BTN never OOP; SB always OOP vs BB.
+// - Hero IP: decision is last on street (after OOP acts).
+// - Hero OOP: decision is first on street (no prior action); no Fold when first to act.
+// - River facing bet: if board/hand indicate very strong (second-nuts+/nut blockers),
+//   remove Fold and bias to Call/Jam so "Fold" is never graded best in those cases.
 
 const rand = (a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
@@ -12,6 +17,7 @@ export const SCENARIO_VILLAIN_STYLES = [
   { id:"FOLDY", label:"Overfolds" }
 ];
 
+// Legal formations (no limps)
 const PREFLOP_FORMS = [
   { id:"SRP_BTN_vs_BB", opener:"BTN", caller:"BB", threeBet:false },
   { id:"SRP_CO_vs_BB",  opener:"CO",  caller:"BB", threeBet:false },
@@ -70,7 +76,7 @@ function sampleHeroHand({ flop }) {
   return { hand, tags, classId: tags.join("_") || "air" };
 }
 
-// Mixes
+// Strategy baselines
 const THEORY = {
   FlopFirstToAct:  { BET25:65, BET75:10, CHECK:25 },
   TurnFirstToAct:  { BET33:40, BET75:20, CHECK:40 },
@@ -81,13 +87,25 @@ const THEORY = {
 
 // Strict IP/OOP mapping (BTN always IP; SB always OOP vs BB)
 function formationToPositions(form) {
-  if (form.opener === "BTN" || form.caller === "BTN") return { ip:"BTN", oop: (form.opener==="BTN"?form.caller:form.opener) };
+  if (form.opener==="BTN" || form.caller==="BTN") return { ip:"BTN", oop:(form.opener==="BTN"?form.caller:form.opener) };
   if ((form.opener==="SB" && form.caller==="BB") || (form.opener==="BB" && form.caller==="SB")) return { ip:"BB", oop:"SB" };
   if (form.caller==="BB") return { ip:form.opener, oop:"BB" };
   return { ip:form.opener, oop:form.caller };
 }
 
-// Decision builder honoring your rule
+// Heuristic: detect strong river contexts (paired/broadway boards + hero has broadway ranks)
+function boardStrengthHeuristic(boardSt, heroHand) {
+  const ranks = boardSt.map(c => c[0]);
+  const counts = ranks.reduce((m,r)=> (m[r]=(m[r]||0)+1, m), {});
+  const paired = Object.values(counts).some(v=>v>=2);
+  const broadway = new Set(["A","K","Q","J","T"]);
+  const bwCount = ranks.filter(r => broadway.has(r)).length;
+  const heroRanks = heroHand.split(" ").map(c=>c[0]);
+  const heroHasBW = heroRanks.some(r=> broadway.has(r));
+  return { paired, bwCount, heroHasBW };
+}
+
+// Build a decision line according to rule: Hero IP -> last; Hero OOP -> first
 function streetDecision({ street, heroSeat, ipSeat, oopSeat }) {
   const heroIsIP = heroSeat === ipSeat;
   const actStrings = street==="River" ? ["checks","bets 75%","jams"] : (street==="Turn" ? ["checks","bets 33%","bets 75%"] : ["checks","bets 33%","bets 50%"]);
@@ -99,7 +117,6 @@ function streetDecision({ street, heroSeat, ipSeat, oopSeat }) {
       heroIsFirst:false
     };
   } else {
-    // Hero OOP, first to act: NO FOLD OPTION
     return {
       toAct: oopSeat, lastAction: "is first to act", oopAggressive: false,
       storyLine: `${street}: ${oopSeat} to act — decision for ${oopSeat} (OOP).`,
@@ -108,10 +125,9 @@ function streetDecision({ street, heroSeat, ipSeat, oopSeat }) {
   }
 }
 
-// Actions: never include Fold when heroIsFirst (OOP first to act)
+// Action set generator (no Fold when first to act)
 function expandedActionsFor(street, ctx) {
   if (ctx?.heroIsFirst) {
-    // first to act: only lead sizes + check
     const sizes = street==="Turn" ? [0.33,0.5,0.75] : [0.25,0.33,0.5,0.75];
     return [
       ...sizes.map(s=>({ id:`BET${Math.round(s*100)}`, label:`Bet ${Math.round(s*100)}%`, kind:"BET", size:s })),
@@ -157,7 +173,6 @@ export function sampleScenario() {
   const positions = formationToPositions(formation);
   const pre = { open: pick([2.2,2.5,3.0]), three: pick([8.5,9.5,10.5]) };
 
-  // Hero can be IP or OOP
   const heroSeat = pick([positions.ip, positions.oop]);
   const villainSeat = heroSeat === positions.ip ? positions.oop : positions.ip;
 
@@ -181,20 +196,28 @@ export function sampleScenario() {
 
   const actions = expandedActionsFor(tpl.street, { lastAction: dec.lastAction, oopAggressive: dec.oopAggressive, heroIsFirst: dec.heroIsFirst });
 
-  // Theory
+  // Theory selection with strong-hand override on river facing bet
+  const hero = sampleHeroHand({ flop });
+  const hs = boardStrengthHeuristic(boardSt, hero.hand);
   let theory;
   if (dec.heroIsFirst) {
     theory = tpl.street==="Turn" ? { BET33:45, BET50:25, BET75:10, CHECK:20 } : { BET25:45, BET33:25, BET50:15, BET75:5, CHECK:10 };
   } else if (tpl.street === "River") {
-    theory = dec.lastAction.startsWith("checks") ? { BET33:55, BET50:25, BET75:10, CHECK:10 } : { CALL:45, FOLD:50, RAISE:5 };
-  } else if (dec.oopAggressive) theory = { CALL:55, FOLD:30, RAISE:15 };
-  else theory = tpl.street==="Turn" ? { BET33:40, BET75:20, CHECK:40 } : { BET25:65, BET75:10, CHECK:25 };
+    if (dec.lastAction.startsWith("checks")) {
+      theory = { BET33:55, BET50:25, BET75:10, CHECK:10 };
+    } else {
+      const strong = (hs.paired && hs.heroHasBW) || (hs.bwCount >= 4 && hs.heroHasBW);
+      theory = strong ? { CALL:75, RAISE:25 } : { CALL:45, FOLD:50, RAISE:5 };
+    }
+  } else if (dec.oopAggressive) {
+    theory = { CALL:55, FOLD:30, RAISE:15 };
+  } else {
+    theory = tpl.street==="Turn" ? { BET33:40, BET75:20, CHECK:40 } : { BET25:65, BET75:10, CHECK:25 };
+  }
 
   const spr = (tpl.street==="River" ? 1.2 : tpl.street==="Turn" ? 4.2 : 6.5) + (Math.random()*0.4-0.2);
   const potBB = formation.threeBet ? 12 : 5.5;
   const heroBB = 78 + rand(-3,3), villBB = heroBB;
-
-  const hero = sampleHeroHand({ flop });
 
   return {
     id: "SCN",
@@ -219,15 +242,13 @@ export function sampleScenario() {
 
 export function gradeAction(scn, actionId) {
   let theory = { ...scn.theory };
-  // If hero is first to act (OOP), Fold should never be graded
   const heroIsFirst = scn.lastAction === "is first to act";
-  if (heroIsFirst) delete theory.FOLD;
-  // Facing bet on flop/turn -> no Check
+  if (heroIsFirst) delete theory.FOLD;                                  // OOP first to act cannot fold
   const facingBetFT = (scn.street==="Flop" || scn.street==="Turn") && scn.lastAction && !scn.lastAction.startsWith("checks") && !heroIsFirst;
-  if (facingBetFT) delete theory.CHECK;
-  // River after check -> no Fold/Call
-  if (scn.street==="River" && scn.lastAction?.startsWith("checks")) { delete theory.FOLD; delete theory.CALL; }
-
+  if (facingBetFT) delete theory.CHECK;                                 // cannot check facing a bet
+  if (scn.street==="River" && scn.lastAction?.startsWith("checks")) {   // river vs check: no Fold/Call
+    delete theory.FOLD; delete theory.CALL;
+  }
   const pct = theory[actionId] || 0;
   const bestId = Object.entries(theory).sort((a,b)=>b[1]-a[1])[0]?.[0];
   const bestPct = theory[bestId] || 0;
