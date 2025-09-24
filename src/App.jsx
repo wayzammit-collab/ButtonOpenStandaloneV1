@@ -1,34 +1,45 @@
-﻿// Ready to paste minimal app so the page shows content after deploy
+﻿// Multi‑trainer router with top nav.
+// Assumes these files exist:
+//   ./trainers/scenario/ScenarioTrainer.jsx
+//   ./trainers/open/OpenTrainer.jsx
+//   ./trainers/threebet/ThreeBetTrainer.jsx
 import React from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
+import ScenarioTrainer from './trainers/scenario/ScenarioTrainer.jsx'
+import OpenTrainer from './trainers/open/OpenTrainer.jsx'
+import ThreeBetTrainer from './trainers/threebet/ThreeBetTrainer.jsx'
+import './styles.css'
 
-function Home() {
+function TopNav() {
   return (
-    <div style={{ padding: 24, color: '#e6ecff', background: '#0f172a', minHeight: '100vh' }}>
-      <h1 style={{ marginTop: 0 }}>Button Open — Standalone V1</h1>
-      <p>This build is running from GitHub Pages subpath <code>/ButtonOpenStandaloneV1</code>.</p>
-      <ul>
-        <li><Link to="/trainer">Open Trainer</Link></li>
-      </ul>
-    </div>
-  )
-}
-
-function Trainer() {
-  return (
-    <div style={{ padding: 24, color: '#e6ecff', background: '#0b1220', minHeight: '100vh' }}>
-      <h2>Trainer placeholder</h2>
-      <p>If this renders, routing and base path are configured correctly.</p>
-      <p><Link to="/">Back</Link></p>
+    <div className="topbar">
+      <div className="brand">NLHE tools</div>
+      <div className="spacer" />
+      <div className="links">
+        <NavLink to="/open" className={({isActive})=>`link ${isActive?'active':''}`}>Open Trainer</NavLink>
+        <NavLink to="/threebet" className={({isActive})=>`link ${isActive?'active':''}`}>3‑Bet Trainer</NavLink>
+        <NavLink to="/scenario" className={({isActive})=>`link ${isActive?'active':''}`}>Scenario Trainer</NavLink>
+      </div>
     </div>
   )
 }
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/trainer" element={<Trainer />} />
-    </Routes>
+    <div className="app-shell">
+      <TopNav />
+      <div className="content">
+        <Routes>
+          {/* Default route -> Open Trainer (change if desired) */}
+          <Route path="/" element={<Navigate to="/open" replace />} />
+          <Route path="/open" element={<OpenTrainer />} />
+          <Route path="/threebet" element={<ThreeBetTrainer />} />
+          <Route path="/scenario" element={<ScenarioTrainer />} />
+          {/* Handle accidental gh‑pages prefixed paths while local */}
+          <Route path="/ButtonOpenStandaloneV1/*" element={<Navigate to="/open" replace />} />
+          <Route path="*" element={<Navigate to="/open" replace />} />
+        </Routes>
+      </div>
+    </div>
   )
 }

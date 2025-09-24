@@ -22,13 +22,38 @@ export default function OpenTrainer() {
   const title = OPEN_MAPS[table].titles[pos];
 
   return (
-    <TrainerShell
-      trainerId="OPEN"
-      title={title}
-      table={table} setTable={setTable} tableOptions={tableOptions}
-      pos={pos} setPos={setPos} posOptions={posOptions}
-      getFreq={getFreq}
-      highScoreKey={highKey}
-    />
+    <div className="trainer-wrap content">
+      {/* Header controls row */}
+      <div className="tb-wrap">
+        <div className="tb-row">
+          <div className="tb-stat">Table</div>
+          <select className="select" value={table} onChange={e => setTable(e.target.value)} style={{ width:140 }}>
+            {tableOptions.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+
+          <div className="tb-stat">Pos</div>
+          <select className="select" value={pos} onChange={e => setPos(e.target.value)} style={{ width:140 }}>
+            {posOptions.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+
+          <div className="spacer" />
+          <div className="tb-stat">Open Trainer</div>
+        </div>
+      </div>
+
+      {/* TrainerShell handles action bar and result banner; ensure it is its own row */}
+      <TrainerShell
+        trainerId="OPEN"
+        title={title}
+        table={table} setTable={setTable} tableOptions={tableOptions}
+        pos={pos} setPos={setPos} posOptions={posOptions}
+        getFreq={getFreq}
+        highScoreKey={highKey}
+        classNames={{ actions: "action-bar", banner: "result-banner" }}
+      />
+
+      {/* Any chart should live below in its own row to avoid overlap */}
+      {/* If TrainerShell renders a chart container, wrap it with chart-wrap class */}
+    </div>
   );
 }
