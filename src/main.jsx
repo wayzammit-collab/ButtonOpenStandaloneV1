@@ -6,7 +6,6 @@ import './styles.css'
 import './theme-dark.css'
 
 const basename = import.meta.env?.BASE_URL?.replace(/\/$/, '') || ''
-// BrowserRouter will derive correct subpath from Vite base when built
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter basename={basename}>

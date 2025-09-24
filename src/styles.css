@@ -59,3 +59,125 @@
 
 /* Keep chart section below actions without overlap */
 .chart-wrap{ margin-top:8px; background:#0f172a; border:1px solid #243247; border-radius:12px; padding:10px; }
+
+/* App layout */
+.app-shell {
+  min-height: 100vh;
+  background: #0a1222;
+}
+.content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Card container */
+.card {
+  background: #0c1628;
+  border: 1px solid #20304c;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+/* Top bar */
+.topbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px auto;
+  max-width: 1100px;
+}
+.brand {
+  color: #e6ecff;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.links {
+  display: flex;
+  gap: 10px;
+}
+
+/* Pill buttons (also applied to NavLink) */
+.btn {
+  appearance: none;
+  border: 1px solid #2c3a58;
+  background: #111a2e;
+  color: #dfe7ff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none; /* NavLink as button */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .15s, border-color .15s, color .15s, transform .02s;
+}
+.btn:hover { background:#15223c; border-color:#3a4f7c; }
+.btn:active { transform: translateY(1px); }
+
+.btn.primary {
+  background: #3a83f6;
+  border-color: #3a83f6;
+  color: #0a1020;
+}
+.btn.primary:hover { background:#5b97f7; border-color:#5b97f7; }
+
+.btn.tonal {
+  background: #1a2438;
+  border-color: #2b3a59;
+}
+
+/* Inputs/selects */
+.select,
+.input,
+select,
+input[type="number"],
+input[type="text"] {
+  background:#0f1830;
+  border:1px solid #223150;
+  color:#dfe7ff;
+  border-radius:8px;
+  padding:6px 8px;
+  font-size:14px;
+}
+select:focus,
+input:focus {
+  outline: none;
+  border-color:#3a83f6;
+  box-shadow: 0 0 0 2px rgba(58,131,246,0.2);
+}
+
+/* Segmented control */
+.segment {
+  display:inline-flex;
+  gap:6px;
+  padding:4px;
+  background:#0f1830;
+  border:1px solid #223150;
+  border-radius:10px;
+}
+.seg-btn {
+  background:#0f1830;
+  border:1px solid #223150;
+  color:#cfe1ff;
+  padding:6px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:13px;
+  line-height:1;
+}
+.seg-btn:hover,
+.seg-btn.active { background:#182540; border-color:#35507e; }
+
+/* Utility */
+.spacer { flex: 1 1 auto; }
+.tb-stat { color:#9fb0d1; font-size:12px; }
+
+/* Result banners */
+.result-banner.ok { color:#0f241d; background:#b2f1df; border:1px solid #3aa58e; }
+.result-banner.err{ color:#3a1b23; background:#ffd9df; border:1px solid #a55364; }
+
+/* Optional: consistent chart container padding */
+.chart-wrap { padding: 12px; }
