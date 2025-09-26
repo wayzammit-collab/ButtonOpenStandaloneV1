@@ -1,3 +1,9 @@
+<script>
+  (function(){
+    var p = sessionStorage.getItem("gh_redirect");
+    if (p) { sessionStorage.removeItem("gh_redirect"); history.replaceState(null, "", p); }
+  })();
+</script>
 <!doctype html>
 <html lang="en">
   <head>
