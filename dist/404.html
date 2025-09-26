@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Redirecting…</title>
+    <meta http-equiv="refresh" content="0; url=./" />
+    <script>
+      // Preserve the path so React Router can read it after boot.
+      sessionStorage.setItem("gh_redirect", location.pathname + location.search + location.hash);
+      location.replace("./");
+    </script>
+  </head>
+  <body>Redirecting…</body>
+</html>
